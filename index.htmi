@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>ระบบรายรับ-รายจ่าย กลุ่มบริหาร ญส.</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Sarabun", "Segoe UI", Tahoma, sans-serif;
+    background: #f2f5f7;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    color: #1a4d8f;
+    margin-bottom: 5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .summary {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .card {
+    flex: 1;
+    min-width: 150px;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .card h3 { margin: 0 0 5px 0; font-size: 14px; color: #777; }
+  .card .amount { font-size: 22px; font-weight: bold; }
+  .income .amount { color: #1a9c4b; }
+  .expense .amount { color: #d9363e; }
+  .balance .amount { color: #1a4d8f; }
+
+  form {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+  label { font-size: 13px; color: #555; display: block; margin-bottom: 4px; }
+  input, select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #1a4d8f;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #123a6b; }
+  .btn-danger { background: #d9363e; }
+  .btn-danger:hover { background: #a92830; }
+  .btn-secondary { background: #6c757d; }
+  .btn-secondary:hover { background: #545b62; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  th, td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  th { background: #1a4d8f; color: white; }
+  tr:hover { background: #f8f9fa; }
+  .type-income { color: #1a9c4b; font-weight: bold; }
+  .type-expense { color: #d9363e; font-weight: bold; }
+  .actions button { padding: 4px 8px; font-size: 12px; margin-right: 4px; }
+  .empty-row { text-align: center; color: #999; padding: 20px; }
+</style>
+</head>
+<body>
+
+<h1>ระบบบริหารรายรับ-รายจ่าย</h1>
+<div class="subtitle">กลุ่มบริหาร ญส.</div>
+
+<div class="container">
+
+  <div class="summary">
+    <div class="card income">
+      <h3>รายรับรวม</h3>
+      <div class="amount" id="totalIncome">0.00</div>
+    </div>
+    <div class="card expense">
+      <h3>รายจ่ายรวม</h3>
+      <div class="amount" id="totalExpense">0.00</div>
+    </div>
+    <div class="card balance">
+      <h3>คงเหลือ</h3>
+      <div class="amount" id="balance">0.00</div>
+    </div>
+  </div>
+
+  <form id="entryForm">
+    <div>
+      <label>ประเภท</label>
+      <select id="type" required>
+        <option value="income">รายรับ</option>
+        <option value="expense">รายจ่าย</option>
+      </select>
+    </div>
+    <div>
+      <label>วันที่</label>
+      <input type="date" id="date" required>
+    </div>
+    <div>
+      <label>หมวดหมู่</label>
+      <input type="text" id="category" placeholder="เช่น ค่าบำรุง, ค่าใช้จ่ายกิจกรรม" required>
+    </div>
+    <div>
+      <label>จำนวนเงิน (บาท)</label>
+      <input type="number" id="amount" step="0.01" min="0" required>
+    </div>
+    <div>
+      <label>ผู้บันทึก</label>
+      <input type="text" id="recorder" placeholder="ชื่อผู้บันทึก" required>
+    </div>
+    <div>
+      <label>รายละเอียด</label>
+      <input type="text" id="description" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">
+    </div>
+    <div>
+      <button type="submit" id="submitBtn">+ บันทึกรายการ</button>
+    </div>
+  </form>
+
+  <div class="toolbar">
+    <div>
+      <label style="display:inline;">กรองตามเดือน:</label>
+      <input type="month" id="filterMonth">
+      <button type="button" class="btn-secondary" onclick="clearFilter()">ล้างตัวกรอง</button>
+    </div>
+    <div>
+      <button type="button" onclick="exportCSV()">ดาวน์โหลด CSV</button>
+      <button type="button" class="btn-danger" onclick="clearAll()">ล้างข้อมูลทั้งหมด</button>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>วันที่</th>
+        <th>ประเภท</th>
+        <th>หมวดหมู่</th>
+        <th>จำนวนเงิน</th>
+        <th>ผู้บันทึก</th>
+        <th>รายละเอียด</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+</div>
+
+<script>
+  const STORAGE_KEY = "yos_finance_data";
+  let entries = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  let editingId = null;
+
+  const form = document.getElementById("entryForm");
+  const tableBody = document.getElementById("tableBody");
+  const filterMonth = document.getElementById("filterMonth");
+
+  document.getElementById("date").valueAsDate = new Date();
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const entry = {
+      id: editingId || Date.now(),
+      type: document.getElementById("type").value,
+      date: document.getElementById("date").value,
+      category: document.getElementById("category").value.trim(),
+      amount: parseFloat(document.getElementById("amount").value),
+      recorder: document.getElementById("recorder").value.trim(),
+      description: document.getElementById("description").value.trim()
+    };
+
+    if (editingId) {
+      const idx = entries.findIndex(e => e.id === editingId);
+      entries[idx] = entry;
+      editingId = null;
+      document.getElementById("submitBtn").textContent = "+ บันทึกรายการ";
+    } else {
+      entries.push(entry);
+    }
+
+    save();
+    form.reset();
+    document.getElementById("date").valueAsDate = new Date();
+    render();
+  });
+
+  filterMonth.addEventListener("change", render);
+
+  function clearFilter() {
+    filterMonth.value = "";
+    render();
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+
+  function editEntry(id) {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    document.getElementById("type").value = entry.type;
+    document.getElementById("date").value = entry.date;
+    document.getElementById("category").value = entry.category;
+    document.getElementById("amount").value = entry.amount;
+    document.getElementById("recorder").value = entry.recorder;
+    document.getElementById("description").value = entry.description;
+    editingId = id;
+    document.getElementById("submitBtn").textContent = "บันทึกการแก้ไข";
+    window.scrollTo({top: 0, behavior: "smooth"});
+  }
+
+  function deleteEntry(id) {
+    if (!confirm("ยืนยันการลบรายการนี้?")) return;
+    entries = entries.filter(e => e.id !== id);
+    save();
+    render();
+  }
+
+  function clearAll() {
+    if (!confirm("ยืนยันการล้างข้อมูลทั้งหมด? ไม่สามารถกู้คืนได้")) return;
+    entries = [];
+    save();
+    render();
+  }
+
+  function formatMoney(n) {
+    return n.toLocaleString("th-TH", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+
+  function render() {
+    let filtered = entries;
+    if (filterMonth.value) {
+      filtered = entries.filter(e => e.date.startsWith(filterMonth.value));
+    }
+
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    tableBody.innerHTML = "";
+    if (filtered.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" class="empty-row">ยังไม่มีรายการ</td></tr>';
+    } else {
+      filtered.forEach(e => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${e.date}</td>
+          <td class="${e.type === 'income' ? 'type-income' : 'type-expense'}">${e.type === 'income' ? 'รายรับ' : 'รายจ่าย'}</td>
+          <td>${e.category}</td>
+          <td>${formatMoney(e.amount)}</td>
+          <td>${e.recorder}</td>
+          <td>${e.description || '-'}</td>
+          <td class="actions">
+            <button onclick="editEntry(${e.id})">แก้ไข</button>
+            <button class="btn-danger" onclick="deleteEntry(${e.id})">ลบ</button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    const totalIncome = filtered.filter(e => e.type === "income").reduce((s, e) => s + e.amount, 0);
+    const totalExpense = filtered.filter(e => e.type === "expense").reduce((s, e) => s + e.amount, 0);
+    document.getElementById("totalIncome").textContent = formatMoney(totalIncome);
+    document.getElementById("totalExpense").textContent = formatMoney(totalExpense);
+    document.getElementById("balance").textContent = formatMoney(totalIncome - totalExpense);
+  }
+
+  function exportCSV() {
+    if (entries.length === 0) {
+      alert("ไม่มีข้อมูลให้ดาวน์โหลด");
+      return;
+    }
+    let csv = "วันที่,ประเภท,หมวดหมู่,จำนวนเงิน,ผู้บันทึก,รายละเอียด\n";
+    entries.forEach(e => {
+      const type = e.type === "income" ? "รายรับ" : "รายจ่าย";
+      csv += `${e.date},${type},${e.category},${e.amount},${e.recorder},"${e.description || ''}"\n`;
+    });
+    const blob = new Blob(["\uFEFF" + csv], {type: "text/csv;charset=utf-8;"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "รายรับรายจ่าย_ญส_" + new Date().toISOString().slice(0,10) + ".csv";
+    link.click();
+  }
+
+  render();
+</script>
+</body>
+</html>
